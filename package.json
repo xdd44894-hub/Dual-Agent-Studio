@@ -2,6 +2,16 @@
   "name": "dual-agent-studio",
   "version": "0.1.1",
   "type": "module",
+  "description": "Local read-only discussion prototype for Codex CLI and DeepSeek Harness",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xdd44894-hub/Dual-Agent-Studio.git"
+  },
+  "homepage": "https://github.com/xdd44894-hub/Dual-Agent-Studio#readme",
+  "bugs": {
+    "url": "https://github.com/xdd44894-hub/Dual-Agent-Studio/issues"
+  },
   "scripts": {
     "start": "node server.js",
     "build:exe": "build.cmd",
@@ -10,7 +20,5 @@
   },
   "engines": {
     "node": ">=25.5.0"
-  },
-  "description": "Local read-only discussion prototype for Codex CLI and DeepSeek Harness",
-  "license": "MIT"
+  }
 }
