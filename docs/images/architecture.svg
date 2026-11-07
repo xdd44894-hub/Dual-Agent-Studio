@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+<title id="title">Dual Agent Studio prototype architecture</title>
+<desc id="desc">A local browser dashboard communicates with a Node.js coordinator that starts Codex CLI and DeepSeek Harness CLI as separate one-shot processes.</desc>
+<defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#111827"/><stop offset="1" stop-color="#1e293b"/></linearGradient><style>
+.t{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.muted{fill:#cbd5e1;font-family:Inter,Segoe UI,Arial,sans-serif}.small{font-size:18px}.head{font-size:25px;font-weight:700}.box{fill:#1f2937;stroke:#64748b;stroke-width:2}.blue{fill:#172f50;stroke:#60a5fa;stroke-width:2}.purple{fill:#30234f;stroke:#c4b5fd;stroke-width:2}.green{fill:#123d39;stroke:#5eead4;stroke-width:2}.line{stroke:#94a3b8;stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+</style></defs>
+<rect width="1200" height="420" rx="28" fill="url(#bg)"/>
+<text x="600" y="54" text-anchor="middle" class="t" font-size="32" font-weight="700">Dual Agent Studio · Current Prototype</text>
+<rect x="390" y="82" width="420" height="78" rx="16" class="box"/><text x="600" y="115" text-anchor="middle" class="t head">Browser Dashboard</text><text x="600" y="143" text-anchor="middle" class="muted small">127.0.0.1:3700 · Local UI</text>
+<path d="M600 160 V203" class="line"/><path d="M590 193 L600 205 L610 193" class="line"/>
+<rect x="315" y="207" width="570" height="78" rx="16" class="green"/><text x="600" y="240" text-anchor="middle" class="t head">Node.js Coordinator</text><text x="600" y="267" text-anchor="middle" class="muted small">Parallel calls · Two-round discussion · Local process control</text>
+<path d="M470 285 V320 H270 V340 M730 285 V320 H930 V340" class="line"/><path d="M260 329 L270 342 L280 329 M920 329 L930 342 L940 329" class="line"/>
+<rect x="95" y="342" width="350" height="58" rx="14" class="blue"/><text x="270" y="378" text-anchor="middle" class="t head">Codex CLI</text>
+<rect x="755" y="342" width="350" height="58" rx="14" class="purple"/><text x="930" y="378" text-anchor="middle" class="t head">DeepSeek Harness CLI</text>
+</svg>

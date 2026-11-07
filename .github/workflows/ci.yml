@@ -1,0 +1,50 @@
+name: Prototype checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    name: Smoke test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          package-manager-cache: false
+      - name: Validate JavaScript syntax
+        run: node --check server.js
+      - name: Test local server only (no AI requests)
+        run: node --test
+
+  build-windows-sea:
+    name: Validate Windows SEA build (unsigned)
+    runs-on: windows-latest
+    needs: smoke-test
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          package-manager-cache: false
+      - name: Build legacy EXE without calling any AI
+        run: node --build-sea sea-config.json
+      - name: Confirm artifact exists (do not publish)
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'dist/DualAgentStudio.exe')) { throw 'SEA executable missing' }
+          Get-Item 'dist/DualAgentStudio.exe' | Select-Object Name,Length

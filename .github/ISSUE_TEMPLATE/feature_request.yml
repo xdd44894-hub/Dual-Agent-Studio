@@ -1,0 +1,17 @@
+name: Feature request / 功能建议
+description: Propose a development improvement / 提交功能建议
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Problem or use case / 使用场景
+      description: What is the problem and who would benefit? / 要解决什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested design / 建议方案
+      placeholder: A rough approach, including security/permission impacts / 可包含权限与安全影响

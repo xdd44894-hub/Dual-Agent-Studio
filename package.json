@@ -1,0 +1,16 @@
+{
+  "name": "dual-agent-studio",
+  "version": "0.1.1",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build:exe": "build.cmd",
+    "test": "node --test",
+    "check": "node --check server.js && node --test"
+  },
+  "engines": {
+    "node": ">=25.5.0"
+  },
+  "description": "Local read-only discussion prototype for Codex CLI and DeepSeek Harness",
+  "license": "MIT"
+}

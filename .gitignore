@@ -1,0 +1,41 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.token
+*.log
+
+# Node / build artifacts
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+*.exe
+*.msi
+*.zip
+*.7z
+
+# Local data, test sessions and workspaces
+.workspace/
+workspaces/
+test-workspace/
+.sessions/
+sessions/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,25 @@
+name: Bug report / 错误反馈
+description: Report a reproducible issue without posting private information / 反馈可复现问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened? / 问题描述
+      description: Do not include API keys, private file paths, prompts, or personal data.
+      placeholder: Describe expected and actual behavior / 预期与实际表现
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment / 环境
+      placeholder: Windows 11, Node.js 26, Dual Agent Studio v0.1.1
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps / 复现步骤
+      placeholder: Steps with non-sensitive example data / 使用非敏感示例数据
+    validations:
+      required: true

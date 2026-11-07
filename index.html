@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dual Agent Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#10151e;--panel:#192330;--border:#344254;--muted:#9daac1;--text:#e9eef9;--blue:#3584df;--green:#42c58a;--red:#f07878}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#1b2b42 0%,var(--bg) 55%);color:var(--text);font:15px system-ui,'Microsoft YaHei',sans-serif}
+main{max-width:1120px;margin:32px auto;padding:16px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}h1{font-size:25px;margin:0}h1 small{font-size:12px;color:var(--muted);font-weight:500}.sub{color:var(--muted);margin:9px 0 20px}
+.statusbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 20px}.chip{border:1px solid var(--border);background:#172230;border-radius:999px;padding:7px 11px;font-size:12px;color:var(--muted)}.chip strong{color:var(--text);font-weight:600}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:6px}.dot.ok{background:var(--green)}.dot.bad{background:var(--red)}
+textarea,select,button{font:inherit;border-radius:10px}textarea{width:100%;min-height:125px;background:var(--panel);border:1px solid var(--border);color:#fff;padding:15px;resize:vertical;line-height:1.6}textarea:focus,select:focus{outline:2px solid #3584df66;border-color:var(--blue)}select{background:var(--panel);border:1px solid var(--border);color:#fff;padding:11px 13px}button{background:var(--blue);color:white;border:0;padding:11px 22px;cursor:pointer;font-weight:600}button:disabled{opacity:.5;cursor:wait}.tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:13px 0}#status{color:var(--muted);font-size:13px}.hint{color:var(--muted);font-size:12px;line-height:1.6;margin:10px 0 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:13px}.panel{background:linear-gradient(145deg,#1b2938,#17212e);border:1px solid var(--border);padding:17px;border-radius:13px;min-width:0}.panel h2{font-size:16px;margin:0 0 12px}.answer{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:14px;color:#dce5f4}h3{margin-top:23px;border-bottom:1px solid var(--border);padding-bottom:9px;color:#aebbd0;font-size:14px}.empty{padding:22px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);text-align:center;margin-top:16px;font-size:13px}.foot{margin-top:28px;border-top:1px solid var(--border);padding-top:13px;color:#7f8da3;font-size:11px;line-height:1.6}
+@media(max-width:700px){main{margin:12px auto}.grid{grid-template-columns:1fr}h1{font-size:21px}}
+</style></head><body><main>
+<header><h1>🤖 Dual Agent Studio <small>V0.1.1 · 本地双 AI 实验室</small></h1><span class="chip">LOCAL · 127.0.0.1</span></header>
+<p class="sub">Codex + DeepSeek Harness · 本地协调 · 只读讨论，不修改项目文件</p>
+<div class="statusbar" id="health"><span class="chip"><i class="dot"></i>正在检查本地服务…</span></div>
+<textarea id="task" placeholder="输入一个开发任务，例如：讨论 Godot 4.7.1 多人联机状态同步的架构。"></textarea>
+<div class="tools"><select id="mode"><option value="parallel">同时回答</option><option value="discuss" selected>互相讨论两轮</option></select><button id="send">开始讨论</button><span id="status">就绪</span></div>
+<p class="hint">当前版本每次调用都会启动新的 CLI 进程。命令已找到仅表示系统能定位程序，不代表登录状态、模型额度或网络服务可用。</p>
+<div id="results"><div class="empty">等待任务。建议先让两位 Agent 独立分析，再交换观点。</div></div>
+<div class="foot">安全提示：服务器仅监听本机 127.0.0.1:3700；Agent 使用只读参数。不要将本地端口转发到公网。Codex / DeepSeek 的模型调用仍受各自账号额度和服务状态限制。</div>
+<script>
+const task=document.getElementById('task'),mode=document.getElementById('mode'),send=document.getElementById('send'),status=document.getElementById('status'),results=document.getElementById('results'),health=document.getElementById('health');
+const add=(parent,tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;e.textContent=text;parent.append(e);return e};
+async function refreshHealth(){try{const r=await fetch('/health',{cache:'no-store'});const d=await r.json();health.replaceChildren();const service=add(health,'span','chip','');add(service,'i','dot ok','');add(service,'strong','','本地服务器运行正常');for(const [key,label] of [['codex','Codex CLI'],['deepseek','DeepSeek CLI']]){const a=d.agents[key],chip=add(health,'span','chip','');add(chip,'i','dot '+(a.found?'ok':'bad'),'');add(chip,'strong','',label+'：'+(a.found?'已找到':'未找到'));} }catch(e){health.textContent='无法连接本地服务器：'+e.message;}}
+refreshHealth();
+send.onclick=async()=>{if(!task.value.trim())return alert('请先输入任务');send.disabled=true;results.replaceChildren();status.textContent='两位 Agent 正在运行；讨论模式会发起两轮调用…';
+try{const response=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:task.value,mode:mode.value})});const data=await response.json();if(!response.ok)throw Error(data.error);
+data.rounds.forEach((round,i)=>{add(results,'h3','',`第 ${i+1} 轮`);const grid=add(results,'div','grid','');for(const [name,label] of [['codex','Codex'],['deepseek','DeepSeek Harness']]){const panel=add(grid,'section','panel','');add(panel,'h2','',label);const item=round[name];add(panel,'div','answer',item.ok?item.text:'运行失败：'+item.error);}});status.textContent='本轮执行结束';
+}catch(e){status.textContent='出错：'+e.message;add(results,'div','empty','请求失败：'+e.message);}finally{send.disabled=false;refreshHealth();}};
+</script></main></body></html>
