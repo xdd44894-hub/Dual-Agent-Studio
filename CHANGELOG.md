@@ -8,6 +8,7 @@ All future changes should be recorded here. / 后续更新在此记录。
 - Added GitHub issue templates, CI smoke-test workflow, and automatic local test suite (no model calls).
 - Added request validation improvements: loopback `Host` checks, JSON-only POST, byte-size cap, and job-lock cleanup fix.
 - Added a lightweight SVG architecture diagram for the current prototype.
+- Added npm `repository`, `homepage`, and `bugs` metadata pointing at this GitHub project.
 - **No Electron desktop app or official Windows installer has been implemented in this documentation-preparation step.**
 
 ## [0.1.1] — Legacy Windows SEA build kit
