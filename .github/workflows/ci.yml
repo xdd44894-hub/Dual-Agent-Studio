@@ -42,9 +42,80 @@ jobs:
           node-version: '26'
           package-manager-cache: false
       - name: Build legacy EXE without calling any AI
-        run: node --build-sea sea-config.json
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          node --build-sea sea-config.json
       - name: Confirm artifact exists (do not publish)
         shell: pwsh
         run: |
           if (!(Test-Path 'dist/DualAgentStudio.exe')) { throw 'SEA executable missing' }
           Get-Item 'dist/DualAgentStudio.exe' | Select-Object Name,Length
+
+  desktop-test:
+    name: Desktop tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm test
+
+  build-windows-desktop:
+    name: Build Windows desktop acceptance packages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/electron-v0.2'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    needs: desktop-test
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run package:win
+      - name: Check both packages
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $required = @(
+            "out/single/DualAgentStudio-$version-Single.exe",
+            'out/folder/win-unpacked/DualAgentStudio.exe',
+            'out/folder/win-unpacked/portable.flag',
+            'out/folder/win-unpacked/resources/app.asar'
+          )
+          foreach ($file in $required) {
+            if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing package file: $file" }
+          }
+          if (Test-Path 'out/single/win-unpacked/portable.flag') { throw 'Unexpected marker in single EXE payload' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DualAgentStudio-Windows-x64-Single
+          path: desktop/out/single/*-Single.exe
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DualAgentStudio-Windows-x64-Portable-Folder
+          path: desktop/out/folder/win-unpacked/
+          if-no-files-found: error
+          retention-days: 14

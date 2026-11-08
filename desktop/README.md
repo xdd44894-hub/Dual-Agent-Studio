@@ -30,3 +30,12 @@ Chromium 会话数据放在所选目录的 `Chromium/`。已确认的凭据方�
 | 便携文件夹 | `out/folder/win-unpacked/` | 构建时生成 `portable.flag`。保留整个文件夹并启动 `DualAgentStudio.exe` |
 
 打包脚本使用 `publish: never`。
+
+## Windows 验收
+
+功能分支的 GitHub Actions 在通过桌面自动测试后生成两个 Windows x64 验收包。打开该次运行的 Artifacts 分别下载并解压。
+
+1. 双击单 EXE。界面应显示标准模式，路径为 `%APPDATA%\Dual Agent Studio`。
+2. 退出程序，在单 EXE 旁创建空的 `portable.flag`，再次启动。界面应显示便携模式，并使用同级 `Data`。
+3. 将便携文件夹解压到普通用户可写目录，确认 `portable.flag` 与 `DualAgentStudio.exe` 在同一层。启动后确认进入便携模式。关闭程序，将整个文件夹移到另一处，再次打开并核对新路径下的 `Data`。
+4. 输入任意测试文本，分别运行 Codex 和 DeepSeek。两个 Agent 都应显示完成，并输出各自的离线模拟结果。退出后检查任务管理器，确认相关进程已经退出。
