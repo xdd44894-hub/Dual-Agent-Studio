@@ -106,6 +106,8 @@ jobs:
             if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing package file: $file" }
           }
           if (Test-Path 'out/single/win-unpacked/portable.flag') { throw 'Unexpected marker in single EXE payload' }
+      - name: Launch and exercise both packaged apps
+        run: node --test checks/windows-packages.cjs
       - uses: actions/upload-artifact@v4
         with:
           name: DualAgentStudio-Windows-x64-Single
