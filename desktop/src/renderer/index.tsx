@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { AgentState, DesktopApi, StorageInfo } from '../shared/api';
+import { VaultPanel } from './VaultPanel';
 import './style.css';
 
 declare global {
@@ -80,6 +81,7 @@ function App() {
           );
         })}
       </section>
+      <VaultPanel vault={studio.vault} />
     </main>
   );
 }

@@ -116,3 +116,38 @@ test('times out a worker and allows another run', { timeout: 5000 }, async t => 
   }
   assert.deepEqual(failures, ['Agent timed out', 'Agent timed out']);
 });
+
+test('encrypted credentials survive restart and reject the wrong password or tampering', async t => {
+  const { CredentialVault } = require('../dist/main/vault.js');
+  const { base } = storageFixture(t);
+  const path = join(base, 'vault.dasv');
+  const password = 'test passphrase only';
+  const secret = 'fake-test-credential-only';
+  const vault = new CredentialVault(path);
+  assert.deepEqual(vault.status(), { phase: 'missing' });
+  await vault.create(password);
+  await assert.rejects(vault.create(password), /已经存在/);
+  vault.set('deepseek', secret);
+  const original = fs.readFileSync(path);
+  assert.equal(original.includes(secret), false);
+  assert.equal(original.includes(password), false);
+  vault.set('deepseek', secret);
+  const rewritten = fs.readFileSync(path);
+  assert.notDeepEqual(rewritten, original);
+  assert.deepEqual(vault.lock(), { phase: 'locked' });
+  assert.throws(() => vault.set('codex', secret), /请先解锁/);
+
+  const reopened = new CredentialVault(path);
+  await assert.rejects(reopened.unlock('incorrect password'), /主密码错误/);
+  assert.deepEqual(reopened.status(), { phase: 'locked' });
+  assert.deepEqual(await reopened.unlock(password), {
+    phase: 'unlocked', configured: { codex: false, deepseek: true }
+  });
+  assert.deepEqual(reopened.remove('deepseek'), {
+    phase: 'unlocked', configured: { codex: false, deepseek: false }
+  });
+  reopened.lock();
+  rewritten[rewritten.length - 1] ^= 1;
+  fs.writeFileSync(path, rewritten);
+  await assert.rejects(reopened.unlock(password), /已损坏/);
+});

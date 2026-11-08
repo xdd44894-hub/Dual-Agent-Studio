@@ -14,3 +14,6 @@ textarea, article { padding: 1rem; background: #202a37; border: 1px solid #3d4d6
 section { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; }
 button { margin-right: 0.5rem; padding: 0.4rem 0.9rem; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.vault-panel { margin-top: 2rem; }
+.vault-panel form { margin-bottom: 1rem; }
+.vault-panel input { display: block; width: min(100%, 22rem); margin: 0.35rem 0 0.65rem; padding: 0.35rem; }

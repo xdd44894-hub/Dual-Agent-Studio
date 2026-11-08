@@ -111,6 +111,21 @@ async function checkPackage(source, executable) {
         })()`);
         assert.match(output, /离线模拟.*18 字符/);
       }
+      assert.equal(await evaluate("document.querySelector('.vault-panel h2').textContent"), '加密凭据库');
+      assert.deepEqual(await evaluate(`(async () => {
+        const vault = window.studio.vault;
+        const password = 'CI-only test password';
+        const initial = (await vault.status()).phase;
+        await vault.create(password);
+        await vault.set('codex', 'CI-fake-credential');
+        const locked = (await vault.lock()).phase;
+        const reopened = await vault.unlock(password);
+        return { initial, locked, reopened };
+      })()`), {
+        initial: 'missing',
+        locked: 'locked',
+        reopened: { phase: 'unlocked', configured: { codex: true, deepseek: false } }
+      });
       readyToClose = true;
     });
     await Promise.race([

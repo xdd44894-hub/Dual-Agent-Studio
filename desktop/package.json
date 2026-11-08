@@ -1,7 +1,7 @@
 {
   "name": "dual-agent-studio-desktop",
   "productName": "Dual Agent Studio",
-  "version": "0.2.0-alpha.2",
+  "version": "0.2.0-alpha.3",
   "description": "Offline desktop foundation for Dual Agent Studio",
   "author": "5923",
   "license": "MIT",
@@ -26,5 +26,8 @@
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "libsodium-wrappers-sumo": "0.8.4"
   }
 }

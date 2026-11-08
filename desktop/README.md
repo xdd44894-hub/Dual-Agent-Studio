@@ -18,7 +18,7 @@ npm start
 
 Windows 使用程序所在目录中的 `portable.flag` 识别便携模式。单 EXE 启动时从 electron-builder 提供的原始启动器目录查找标记，避开临时解包目录。有标记时使用同级 `Data`，否则使用 `%APPDATA%\Dual Agent Studio`。路径不可写时显示启动错误。
 
-Chromium 会话数据放在所选目录的 `Chromium/`。已确认的凭据方案使用 `Security/vault.dasv`，算法为 Argon2id 和 XChaCha20-Poly1305。本阶段只创建 `Security/` 目录。加密库和凭据录入留待接入阶段。
+Chromium 会话数据放在所选目录的 `Chromium/`。已确认的凭据方案使用 `Security/vault.dasv`，算法为 Argon2id 和 XChaCha20-Poly1305。在桌面界面的「加密凭据库」创建主密码后，可以保存或移除 Codex 与 DeepSeek 的测试凭据。退出程序会锁定凭据库。重启后用同一主密码解锁，界面只显示保存状态。主密码丢失后无法恢复已有凭据。本阶段使用假凭据验收，离线模拟进程不读取凭据。
 
 ## Windows x64 打包
 

@@ -5,10 +5,16 @@ import { createOfflineAdapters } from './adapters';
 import { AgentManager } from './agent-manager';
 import { agentId, agentTask, APP_URL, isTrustedSender } from './ipc-policy';
 import { initializeStorage } from './storage';
+import { CredentialVault } from './vault';
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'studio', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
 ]);
+
+function secretText(value: unknown): string {
+  if (typeof value !== 'string') throw new Error('凭据输入无效。');
+  return value;
+}
 
 function bootstrap() {
   const storage = initializeStorage(
@@ -24,6 +30,7 @@ function bootstrap() {
     return;
   }
 
+  const vault = new CredentialVault(join(storage.root, 'Security', 'vault.dasv'));
   let window: BrowserWindow | null = null;
   let quitting = false;
   let readyToQuit = false;
@@ -75,6 +82,7 @@ function bootstrap() {
     event.preventDefault();
     if (quitting) return;
     quitting = true;
+    vault.lock();
     void agents.shutdown().then(() => {
       readyToQuit = true;
       app.quit();
@@ -96,6 +104,12 @@ function bootstrap() {
     handle('studio:agents', 0, () => agents.list());
     handle('studio:start', 2, (id, task) => agents.start(agentId(id), agentTask(task)));
     handle('studio:stop', 1, id => agents.stop(agentId(id)));
+    handle('studio:vault-status', 0, () => vault.status());
+    handle('studio:vault-create', 1, passphrase => vault.create(secretText(passphrase)));
+    handle('studio:vault-unlock', 1, passphrase => vault.unlock(secretText(passphrase)));
+    handle('studio:vault-lock', 0, () => vault.lock());
+    handle('studio:vault-set', 2, (id, secret) => vault.set(agentId(id), secretText(secret)));
+    handle('studio:vault-remove', 1, id => vault.remove(agentId(id)));
     openWindow();
   }).catch(() => {
     dialog.showErrorBox('Dual Agent Studio', '桌面服务启动失败。');
