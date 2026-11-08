@@ -1,0 +1,16 @@
+:root {
+  color-scheme: dark;
+  font: 16px system-ui, sans-serif;
+  color: #edf2fa;
+  background: #141a23;
+}
+main { max-width: 60rem; margin: auto; padding: 2rem; }
+header { margin-bottom: 2rem; overflow-wrap: anywhere; }
+h1, h2 { margin: 0.3rem 0; }
+.tag { color: #91d6c2; letter-spacing: 0.08em; }
+label, textarea { display: block; }
+textarea { box-sizing: border-box; width: 100%; margin: 0.5rem 0 1rem; resize: vertical; }
+textarea, article { padding: 1rem; background: #202a37; border: 1px solid #3d4d62; border-radius: 0.5rem; }
+section { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; }
+button { margin-right: 0.5rem; padding: 0.4rem 0.9rem; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }

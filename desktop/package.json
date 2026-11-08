@@ -1,0 +1,30 @@
+{
+  "name": "dual-agent-studio-desktop",
+  "productName": "Dual Agent Studio",
+  "version": "0.2.0-alpha.1",
+  "description": "Offline desktop foundation for Dual Agent Studio",
+  "author": "5923",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && vite build",
+    "start": "npm run build && electron .",
+    "test": "npm run build && node --test checks/foundation.cjs",
+    "package:win": "npm run build && node package-windows.cjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
