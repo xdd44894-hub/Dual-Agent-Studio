@@ -11,14 +11,14 @@
 ```powershell
 Set-Location plugins/dsh-bridge
 npm ci
-npm test
+npm run install:local
 dsh --profile headless --help
 node dist/server.mjs bind my-project 'session-实际ID' 'E:\WorkSpace\实际项目目录'
 ```
 
 用实际会话 ID 和该会话创建时的工作目录替换示例。DSH 只会续接相同工作目录下、且能被 headless 配置加载的既有会话。使用不同的别名可以登记另一个会话。旧别名的绑定文件位于 `%LOCALAPPDATA%\Dual Agent Studio\DSH Bridge\bindings`。绑定文件只记录 DSH 会话 ID 和工作目录。使用同一 DSH 配置目录，并确保 headless 已有可用的模型凭据。DSH 的 GUI 登录与 headless 凭据设置可能不同，详情见 [DSH headless 文档](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/bundle/headless)。
 
-重新打开 ChatGPT 桌面版，从该仓库的本地插件列表安装或更新 **DSH Bridge**。在目标本地 Work 对话里用 `@` 选择 DSH Bridge，说「打开 my-project 的三方聊天室」。DSH 侧用你专门创建的会话。第一版复用 DSH 的 headless 入口，安装 Work 插件和绑定 DSH 会话后即可接入。
+完全退出并重新打开 ChatGPT 桌面版，在「插件」中找到安装命令打印的本地目录名称，再安装或更新 **DSH Bridge**。安装命令会把构建好的插件登记到个人本地目录和 `~/.agents/plugins/marketplace.json`，可以在其他项目的本地 Work 对话中找到它。在目标本地 Work 对话里用 `@` 选择 DSH Bridge，说「打开 my-project 的三方聊天室」。DSH 侧用你专门创建的会话。第一版复用 DSH 的 headless 入口，安装 Work 插件和绑定 DSH 会话后即可接入。
 
 - **你发言**时，可以只加入房间，发给 Work，或批准发给 DSH。
 - **Work 回复**时用插件把回复加入同一条时间线。你可以把它载入编辑框，审阅后再发给 DSH。

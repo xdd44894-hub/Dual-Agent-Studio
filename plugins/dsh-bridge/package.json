@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "npm run build && node --test checks.mjs",
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "install:local": "npm run build && node install-local.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "2.0.4",

@@ -126,3 +126,34 @@ test('room keeps three authors, gates DSH by a view token and survives a restart
   assert.deepEqual(reopened._meta.room.messages, messages);
   assert.notEqual(reopened._meta.token, token);
 });
+
+test('personal installation copies the built room and preserves existing marketplace entries', async t => {
+  const { installLocal } = await import('./install-local.mjs');
+  const { mkdir, readFile, writeFile } = await import('node:fs/promises');
+  const root = await mkdtemp(join(tmpdir(), 'dsh-install-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const catalogDir = join(root, '.agents', 'plugins');
+  const file = join(catalogDir, 'marketplace.json');
+  const previous = { name: 'mine', plugins: [{ name: 'other-plugin', source: { source: 'local', path: './other' } }] };
+  await mkdir(catalogDir, { recursive: true });
+  await writeFile(file, '\uFEFF' + JSON.stringify(previous));
+  const installation = await installLocal(root);
+  await installLocal(root);
+  const config = JSON.parse(await readFile(file, 'utf8'));
+  assert.deepEqual(config.plugins[0], previous.plugins[0]);
+  assert.equal(config.plugins.length, 2);
+  const target = join(root, config.plugins[1].source.path);
+  assert.equal(target, installation.target);
+  assert.match(await readFile(join(target, 'dist', 'room.html'), 'utf8'), /三方聊天室/);
+
+  const client = new Client({ name: 'installed', version: '1.0.0' });
+  try {
+    await client.connect(new StdioClientTransport({
+      command: process.execPath,
+      args: [join(target, 'dist', 'server.mjs')]
+    }));
+    assert.ok((await client.listTools()).tools.some(tool => tool.name === 'open_three_way_room'));
+  } finally {
+    await client.close();
+  }
+});
