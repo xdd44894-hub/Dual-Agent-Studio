@@ -1,0 +1,11 @@
+{
+  "name": "dual-agent-studio",
+  "plugins": [
+    {
+      "name": "dsh-bridge",
+      "source": { "source": "local", "path": "./plugins/dsh-bridge" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}
