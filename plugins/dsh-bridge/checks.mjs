@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { mailbox, registerReceiver } from './mailbox.mjs';
 import { registerRoom, ROOM_URI } from './room.mjs';
 import { bind, createBridge } from './bridge.mjs';
 
@@ -67,64 +69,64 @@ test('built stdio server advertises room and handoff tools', async () => {
   }
 });
 
-test('room keeps three authors, gates DSH by a view token and survives a restart', async t => {
+test('Work and DSH use distinct tools and exchange approved messages across restarts', async t => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-room-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const directory = () => join(root, 'bindings');
-  await bind(directory(), 'project', 'old-dsh-session', root);
-  const calls = [];
-  async function connect() {
+  const roomsRoot = () => join(root, 'rooms');
+  const alias = 'project';
+  const inbox = mailbox(roomsRoot(), alias);
+  await inbox.initialize();
+
+  async function connect(register) {
     const client = new Client({ name: 'test', version: '1.0.0' });
     const server = new McpServer({ name: 'test-room', version: '1.0.0' });
-    registerRoom(server, { directory, html: '<p>test</p>', run: async (session, prompt) => {
-      calls.push({ session, prompt });
-      return 'DSH answer';
-    } });
+    register(server);
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     t.after(() => client.close());
     return {
-      call: (name, args) => client.callTool({ name, arguments: args }),
+      call: (name, args = {}) => client.callTool({ name, arguments: args }),
+      tools: async () => (await client.listTools()).tools.map(tool => tool.name).sort(),
       close: () => client.close()
     };
   }
 
-  const first = await connect();
-  const open = await first.call('open_three_way_room', { alias: 'project' });
-  const { token } = open._meta;
+  const connectWork = () => connect(server => registerRoom(server, { roomsRoot, html: '<p>test</p>' }));
+  const work = await connectWork();
+  const dsh = await connect(server => registerReceiver(server, mailbox(roomsRoot(), alias), alias));
+  assert.deepEqual(await dsh.tools(), ['post_reply', 'receive_message']);
+  const open = await work.call('open_three_way_room', { alias });
   assert.equal(open.structuredContent, undefined);
-  assert.deepEqual(open._meta.room.messages, []);
-  assert.equal((await first.call('room_action', {
+  const { token } = open._meta;
+  assert.equal((await work.call('room_action', {
     action: 'send-dsh', text: 'unapproved', token: '0'.repeat(64)
   })).isError, true);
-  assert.equal(calls.length, 0);
-  const update = (action, text) => first.call('room_action', { action, text, token });
+  const update = (action, text) => work.call('room_action', { action, text, token });
+  const receive = async () => JSON.parse((await dsh.call('receive_message')).content[0].text);
   await update('post', 'user only');
-  await first.call('post_work_message', { alias: 'project', text: 'Work reply' });
-  assert.equal(calls.length, 0);
+  await work.call('post_work_message', { alias, text: 'Work reply' });
+  assert.equal((await receive()).pending, false);
   await update('send-dsh', 'approved prompt');
+  const queued = await receive();
+  assert.equal(queued.text, 'approved prompt');
+  assert.equal(queued.from, 'user');
+  await work.close();
 
-  let state;
-  for (let attempt = 0; attempt < 50; attempt++) {
-    state = await update('refresh');
-    if (!state._meta.room.running) break;
-    await new Promise(resolve => setTimeout(resolve, 10));
-  }
-  assert.deepEqual(state.content, []);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].session.sessionId, 'old-dsh-session');
-  assert.equal(calls[0].prompt, 'approved prompt');
-  const messages = state._meta.room.messages;
+  const payload = { requestId: queued.requestId, text: 'DSH answer' };
+  const replies = await Promise.all([dsh.call('post_reply', payload), dsh.call('post_reply', payload)]);
+  assert.equal(replies.filter(result => result.isError).length, 1);
+  assert.equal((await receive()).pending, false);
+
+  const reopened = await connectWork();
+  const result = await reopened.call('open_three_way_room', { alias });
+  assert.notEqual(result._meta.token, token);
+  assert.equal(result._meta.room.waiting, 0);
+  const messages = result._meta.room.messages;
   assert.equal(messages.length, 4);
-  assert.deepEqual(messages.map(({ role }) => role), ['user', 'work', 'user', 'dsh']);
-  assert.equal(messages[3].text, 'DSH answer');
-  await first.close();
-
-  const second = await connect();
-  const reopened = await second.call('open_three_way_room', { alias: 'project' });
-  assert.deepEqual(reopened._meta.room.messages, messages);
-  assert.notEqual(reopened._meta.token, token);
+  assert.deepEqual(new Set(messages.map(({ role }) => role)), new Set(['user', 'work', 'dsh']));
+  assert.equal(messages.filter(message => message.text === 'DSH answer').length, 1);
+  assert.doesNotMatch(JSON.stringify(result.content), /DSH answer/);
 });
 
 test('personal installation copies the built room and preserves existing marketplace entries', async t => {
@@ -153,6 +155,35 @@ test('personal installation copies the built room and preserves existing marketp
       args: [join(target, 'dist', 'server.mjs')]
     }));
     assert.ok((await client.listTools()).tools.some(tool => tool.name === 'open_three_way_room'));
+  } finally {
+    await client.close();
+  }
+});
+
+test('generated DSH bundle mounts its receiver over stdio with no Work tools', async t => {
+  const { setupReceiver } = await import('./setup-receiver.mjs');
+  const { readFile } = await import('node:fs/promises');
+  const root = await mkdtemp(join(tmpdir(), 'dsh-bundle-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const target = await setupReceiver(root, 'threeway', new URL('./dist/server.mjs', import.meta.url));
+  const manifest = JSON.parse(await readFile(join(target, 'package.json'), 'utf8'));
+  const [{ insert: [row] }] = JSON.parse(await readFile(join(target, manifest.dsh.bundle.patch), 'utf8'));
+  const { apply } = await import(pathToFileURL(join(target, 'index.mjs')));
+  let registered;
+  apply({ mcpManager: { register: (name, spec) => { registered = { name, ...spec }; } } }, row.config);
+  assert.equal(registered.name, 'threeway');
+  assert.equal(registered.transport, 'stdio');
+  const inbox = mailbox(join(root, 'rooms'), 'threeway');
+  const id = await inbox.enqueue('a local fixture');
+  const client = new Client({ name: 'bundle-test', version: '1.0.0' });
+  try {
+    await client.connect(new StdioClientTransport({ command: registered.command, args: registered.args }));
+    assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(), ['post_reply', 'receive_message']);
+    const { content } = await client.callTool({ name: 'receive_message' });
+    assert.equal(JSON.parse(content[0].text).requestId, id);
+    const posted = await client.callTool({ name: 'post_reply', arguments: { requestId: id, text: 'local reply' } });
+    assert.ok(!posted.isError);
+    assert.ok((await inbox.list()).some(record => record.role === 'dsh' && record.text === 'local reply'));
   } finally {
     await client.close();
   }

@@ -4,17 +4,15 @@ import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
-import { getSession } from './bridge.mjs';
+import { aliasSchema, mailbox, textSchema } from './mailbox.mjs';
 
 export const ROOM_URI = 'ui://dsh-bridge/room.html';
-const aliasSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,47}$/);
-const textSchema = z.string().trim().min(1).max(16_000);
 
-export function registerRoom(server, { directory, run, html }) {
+export function registerRoom(server, { roomsRoot, html }) {
   const capabilities = new Map();
-  const turns = new Map();
+  const roomPath = alias => join(roomsRoot(), alias);
+  const inboxFor = alias => mailbox(roomsRoot(), alias);
   let lastOrder = 0;
-  const roomPath = alias => join(directory(), '..', 'rooms', alias);
   const toolError = error => ({ isError: true, content: [{ type: 'text', text: error.message }] });
 
   async function append(alias, role, text) {
@@ -40,8 +38,11 @@ export function registerRoom(server, { directory, run, html }) {
     });
     const names = files.filter(name => /^\d{13}-[a-f0-9-]{36}\.json$/.test(name)).sort().slice(-100);
     const messages = await Promise.all(names.map(async name => JSON.parse(await readFile(join(folder, name), 'utf8'))));
-    const turn = turns.get(alias);
-    return { alias, messages, running: Boolean(turn?.running), error: turn?.error };
+    const entries = await inboxFor(alias).list();
+    const answered = new Set(entries.filter(entry => entry.role === 'dsh').map(entry => entry.requestId));
+    const combined = messages.concat(entries)
+      .sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id)).slice(-100);
+    return { alias, messages: combined, waiting: entries.filter(entry => entry.forwarded && !answered.has(entry.id)).length };
   }
 
   function issue(alias) {
@@ -57,12 +58,12 @@ export function registerRoom(server, { directory, run, html }) {
       text: html ?? readFileSync(new URL('./room.html', import.meta.url), 'utf8') }]
   }));
   registerAppTool(server, 'open_three_way_room', {
-    description: 'Open the three-way chat panel for the locally registered alias requested by the user. Opening a room does not send any text to DSH.',
+    description: 'Open the three-way chat panel for the local receiver room requested by the user. Opening a room does not send any text to DSH.',
     inputSchema: { alias: aliasSchema },
     _meta: { ui: { resourceUri: ROOM_URI } }
   }, async ({ alias }) => {
     try {
-      await getSession(directory(), alias);
+      await inboxFor(alias).assertReady();
       return {
         content: [{ type: 'text', text: `已打开三方聊天室「${alias}」。从当前 Work 对话发送的回复可用 post_work_message 加入时间线。` }],
         _meta: { room: await snapshot(alias), token: issue(alias) }
@@ -74,7 +75,7 @@ export function registerRoom(server, { directory, run, html }) {
     inputSchema: { alias: aliasSchema, text: textSchema }
   }, async ({ alias, text }) => {
     try {
-      await getSession(directory(), alias);
+      await inboxFor(alias).assertReady();
       await append(alias, 'work', text);
       return { content: [{ type: 'text', text: '已将 Work 回复加入房间。' }] };
     } catch (error) { return toolError(error); }
@@ -85,33 +86,17 @@ export function registerRoom(server, { directory, run, html }) {
     inputSchema: {
       token: z.string().length(64),
       action: z.enum(['refresh', 'post', 'send-dsh']),
-      text: textSchema.optional()
+      text: textSchema.optional(),
+      source: z.enum(['user', 'work']).optional()
     },
     _meta: { ui: { visibility: ['app'] } }
-  }, async ({ token, action, text }) => {
+  }, async ({ token, action, text, source }) => {
     try {
       const alias = capabilities.get(token);
       if (!alias) throw new Error('房间已断开，请在这条 Work 对话重新打开。');
       if (action !== 'refresh' && !text) throw new Error('请输入消息。');
       if (action === 'post') await append(alias, 'user', text);
-      if (action === 'send-dsh') {
-        if (turns.get(alias)?.running) throw new Error('DSH 正在回复，请等待本轮结束。');
-        const turn = { running: true };
-        turns.set(alias, turn);
-        void (async () => {
-          try {
-            const session = await getSession(directory(), alias);
-            await append(alias, 'user', text);
-            const reply = await run(session, text);
-            if (!reply) throw new Error('DSH 返回了空回复。');
-            await append(alias, 'dsh', reply.length <= 16_000 ? reply : `${reply.slice(0, 15_980)}\n[回复已截断]`);
-          } catch (error) {
-            turn.error = error.message;
-          } finally {
-            turn.running = false;
-          }
-        })();
-      }
+      if (action === 'send-dsh') await inboxFor(alias).enqueue(text, source);
       return { content: [], _meta: { room: await snapshot(alias) } };
     } catch (error) { return toolError(error); }
   });

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const name = 'dsh-bridge';
 const relativePluginPath = './.codex/plugins/dsh-bridge';
 const source = dirname(fileURLToPath(import.meta.url));
-const files = ['plugin.json', 'mcp.json', 'skills', 'approve.ps1', 'run-dsh.ps1', 'dist'];
+const files = ['plugin.json', 'mcp.json', 'skills', 'approve.ps1', 'run-dsh.ps1', 'receiver-bundle', 'dist'];
 
 export async function installLocal(userDirectory = homedir()) {
   const marketplace = join(userDirectory, '.agents', 'plugins', 'marketplace.json');
