@@ -1,14 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dsh-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Exchange approved text between a local Work thread and an existing DSH session.",
   "extensions": {
     "com.openai": {
       "requires_local_executor": true,
       "interface": {
         "displayName": "DSH Bridge",
-        "shortDescription": "本地批准后交接 DSH 会话",
+        "shortDescription": "你、DSH 与 Work 三方聊天",
         "category": "Productivity"
       }
     }

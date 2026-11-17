@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { registerRoom } from './room.mjs';
 import { approveWindows, bind, bindingsDirectory, createBridge, runDsh } from './bridge.mjs';
 
 if (process.argv[2] === 'bind') {
@@ -12,7 +13,11 @@ if (process.argv[2] === 'bind') {
   console.log(`已绑定 ${alias}。`);
 } else {
   const exchange = createBridge({ directory: bindingsDirectory, approve: approveWindows, run: runDsh });
-  const server = new McpServer({ name: 'dsh-bridge', version: '0.1.0' });
+  const server = new McpServer({ name: 'dsh-bridge', version: '0.2.0' });
+  const lifetime = new AbortController();
+  process.stdin.once('end', () => lifetime.abort());
+  registerRoom(server, { directory: bindingsDirectory,
+    run: (session, prompt) => runDsh(session, prompt, lifetime.signal) });
   server.registerTool('exchange_with_dsh', {
     description: 'Propose one prompt for a locally registered DSH session. Windows requires approval before sending and again before returning selected reply text. Call only for a user-requested exchange.',
     inputSchema: {

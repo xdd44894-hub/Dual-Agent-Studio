@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerRoom, ROOM_URI } from './room.mjs';
 import { bind, createBridge } from './bridge.mjs';
 
 test('approved text crosses both boundaries and a new bridge resumes the same session', async t => {
@@ -40,7 +43,7 @@ test('approved text crosses both boundaries and a new bridge resumes the same se
   ]);
 });
 
-test('local MCP server advertises only the approval-gated handoff tool', async () => {
+test('built stdio server advertises room and handoff tools', async () => {
   const client = new Client({ name: 'offline-test', version: '1.0.0' });
   const transport = new StdioClientTransport({
     command: process.execPath,
@@ -48,7 +51,12 @@ test('local MCP server advertises only the approval-gated handoff tool', async (
   });
   try {
     await client.connect(transport);
-    assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), ['exchange_with_dsh']);
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map(tool => tool.name).sort(),
+      ['exchange_with_dsh', 'open_three_way_room', 'post_work_message', 'room_action']);
+    const resource = await client.readResource({ uri: ROOM_URI });
+    assert.match(resource.contents[0].text, /你 · DSH · Work/);
+    assert.doesNotMatch(resource.contents[0].text, /ROOM_SCRIPT/);
     const rejected = await client.callTool({
       name: 'exchange_with_dsh',
       arguments: { alias: '../escape', prompt: 'example' }
@@ -57,4 +65,64 @@ test('local MCP server advertises only the approval-gated handoff tool', async (
   } finally {
     await client.close();
   }
+});
+
+test('room keeps three authors, gates DSH by a view token and survives a restart', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-room-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const directory = () => join(root, 'bindings');
+  await bind(directory(), 'project', 'old-dsh-session', root);
+  const calls = [];
+  async function connect() {
+    const client = new Client({ name: 'test', version: '1.0.0' });
+    const server = new McpServer({ name: 'test-room', version: '1.0.0' });
+    registerRoom(server, { directory, html: '<p>test</p>', run: async (session, prompt) => {
+      calls.push({ session, prompt });
+      return 'DSH answer';
+    } });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    t.after(() => client.close());
+    return {
+      call: (name, args) => client.callTool({ name, arguments: args }),
+      close: () => client.close()
+    };
+  }
+
+  const first = await connect();
+  const open = await first.call('open_three_way_room', { alias: 'project' });
+  const { token } = open._meta;
+  assert.equal(open.structuredContent, undefined);
+  assert.deepEqual(open._meta.room.messages, []);
+  assert.equal((await first.call('room_action', {
+    action: 'send-dsh', text: 'unapproved', token: '0'.repeat(64)
+  })).isError, true);
+  assert.equal(calls.length, 0);
+  const update = (action, text) => first.call('room_action', { action, text, token });
+  await update('post', 'user only');
+  await first.call('post_work_message', { alias: 'project', text: 'Work reply' });
+  assert.equal(calls.length, 0);
+  await update('send-dsh', 'approved prompt');
+
+  let state;
+  for (let attempt = 0; attempt < 50; attempt++) {
+    state = await update('refresh');
+    if (!state._meta.room.running) break;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.deepEqual(state.content, []);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].session.sessionId, 'old-dsh-session');
+  assert.equal(calls[0].prompt, 'approved prompt');
+  const messages = state._meta.room.messages;
+  assert.equal(messages.length, 4);
+  assert.deepEqual(messages.map(({ role }) => role), ['user', 'work', 'user', 'dsh']);
+  assert.equal(messages[3].text, 'DSH answer');
+  await first.close();
+
+  const second = await connect();
+  const reopened = await second.call('open_three_way_room', { alias: 'project' });
+  assert.deepEqual(reopened._meta.room.messages, messages);
+  assert.notEqual(reopened._meta.token, token);
 });

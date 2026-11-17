@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三方聊天室</title>
+<style>
+:root{color-scheme:light dark;font:15px system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;padding:12px;color:CanvasText;background:Canvas}
+main{max-width:860px;margin:auto;border:1px solid color-mix(in srgb,CanvasText 18%,Canvas);border-radius:14px;padding:16px}
+header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:1.15rem;margin:0}
+#participants{font-size:.88rem}
+#status{min-height:1.4em;font-size:.9rem}
+#timeline{height:clamp(210px,42vh,480px);overflow:auto;display:flex;flex-direction:column;gap:10px;padding:6px 2px 12px}
+article{border:1px solid color-mix(in srgb,CanvasText 16%,Canvas);border-left:4px solid #9470e0;border-radius:9px;padding:10px}
+article[data-role="user"]{border-left-color:#258f6c}
+article[data-role="dsh"]{border-left-color:#538bdd}
+article p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+time{font-size:.8rem;margin-left:.8rem;opacity:.72}
+label{display:block;margin-bottom:5px}
+textarea{display:block;width:100%;resize:vertical;padding:8px;border-radius:7px;font:inherit;background:Canvas;color:CanvasText}
+button{border:1px solid color-mix(in srgb,CanvasText 25%,Canvas);border-radius:7px;padding:6px 9px;color:CanvasText;background:Canvas;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+dialog{width:min(90%,650px);border-radius:12px;padding:16px}
+.primary{background:#235948;color:#fff;border-color:#235948}
+</style>
+</head>
+<body>
+<main>
+<header><h1>三方聊天室 <span id="alias"></span></h1><span id="participants">你 · DSH · Work</span></header>
+<p id="status" role="status">正在连接本地房间…</p>
+<div id="timeline" aria-label="消息时间线"></div>
+<label for="draft">你的消息</label>
+<textarea id="draft" maxlength="16000" rows="3" disabled></textarea>
+<div class="actions">
+<button id="post" disabled>只发到房间</button>
+<button id="send-dsh" class="primary" disabled>批准并发送给 DSH</button>
+<button id="send-work" disabled>发送给 Work</button>
+</div>
+<dialog id="share-dialog">
+<form method="dialog">
+<label for="share-text">确认回传给 Work 的文字</label>
+<textarea id="share-text" maxlength="16000" rows="7"></textarea>
+<div class="actions">
+<button value="cancel">取消</button>
+<button value="approve" class="primary">批准并回传</button>
+</div>
+</form>
+</dialog>
+</main>
+<script>/* ROOM_SCRIPT */</script>
+</body>
+</html>
